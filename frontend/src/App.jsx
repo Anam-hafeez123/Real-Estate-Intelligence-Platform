@@ -18,14 +18,24 @@ import {
   ExternalLink,
   CheckCircle2,
   BarChart3,
+  School,
+  Hospital,
+  ShoppingCart,
+  Utensils,
+  Dumbbell,
+  Navigation,
+  LayoutDashboard,
 } from "lucide-react";
 
 import api from "./services/api";
 import "./App.css";
-import "./searchresults.css";
 
 function formatMillion(value) {
-  if (value === null || value === undefined || value === "") {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
     return "N/A";
   }
 
@@ -39,7 +49,11 @@ function formatMillion(value) {
 }
 
 function formatNumber(value) {
-  if (value === null || value === undefined || value === "") {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
     return "N/A";
   }
 
@@ -83,19 +97,29 @@ function App() {
 
   const [assistantQuery, setAssistantQuery] = useState("");
 
-  const [assistantResults, setAssistantResults] = useState(null);
+  const [assistantResults, setAssistantResults] =
+    useState(null);
 
-  const [selectedPlot, setSelectedPlot] = useState(null);
+  const [selectedPlot, setSelectedPlot] =
+    useState(null);
 
-  const [loadingMarket, setLoadingMarket] = useState(true);
+  const [loadingMarket, setLoadingMarket] =
+    useState(true);
 
-  const [loadingAssistant, setLoadingAssistant] = useState(false);
+  const [loadingAssistant, setLoadingAssistant] =
+    useState(false);
 
-  const [marketError, setMarketError] = useState("");
+  const [marketError, setMarketError] =
+    useState("");
 
-  const [assistantError, setAssistantError] = useState("");
+  const [assistantError, setAssistantError] =
+    useState("");
 
-  const [apiConnected, setApiConnected] = useState(false);
+  const [apiConnected, setApiConnected] =
+    useState(false);
+
+  const [showDashboard, setShowDashboard] =
+    useState(false);
 
   useEffect(() => {
     loadMarketOverview();
@@ -106,12 +130,17 @@ function App() {
       setLoadingMarket(true);
       setMarketError("");
 
-      const response = await api.get("/market/overview");
+      const response = await api.get(
+        "/market/overview"
+      );
 
       setMarketData(response.data);
       setApiConnected(true);
     } catch (error) {
-      console.error("Market overview error:", error);
+      console.error(
+        "Market overview error:",
+        error
+      );
 
       setApiConnected(false);
 
@@ -124,7 +153,9 @@ function App() {
     }
   }
 
-  async function handleAssistantSearch(query = assistantQuery) {
+  async function handleAssistantSearch(
+    query = assistantQuery
+  ) {
     const cleanQuery = String(query || "").trim();
 
     if (!cleanQuery || loadingAssistant) {
@@ -135,22 +166,31 @@ function App() {
       setLoadingAssistant(true);
       setAssistantError("");
 
-      const response = await api.post("/assistant/search", {
-        query: cleanQuery,
-      });
+      const response = await api.post(
+        "/assistant/search",
+        {
+          query: cleanQuery,
+        }
+      );
 
       setAssistantResults(response.data);
-
       setApiConnected(true);
 
-      setTimeout(() => {
-        document.getElementById("results")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }, 150);
+      window.setTimeout(() => {
+        document
+          .getElementById("results")
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+      }, 100);
     } catch (error) {
-      console.error("Assistant search error:", error);
+      console.error(
+        "Assistant search error:",
+        error
+      );
+
+      setApiConnected(false);
 
       setAssistantError(
         error.response?.data?.detail ||
@@ -175,31 +215,141 @@ function App() {
     }
   }
 
+  function buildPropertySearch(plot) {
+    if (!plot) {
+      return "DHA Lahore";
+    }
+
+    const parts = [
+      plot.plot_number,
+      plot.block,
+      plot.phase,
+      plot.society,
+    ].filter(Boolean);
+
+    return parts.length > 0
+      ? parts.join(", ")
+      : "DHA Lahore";
+  }
+
   function openMap(plot) {
-    const latitude = plot?.latitude;
-    const longitude = plot?.longitude;
+    if (!plot) {
+      return;
+    }
+
+    const latitude = plot.latitude;
+    const longitude = plot.longitude;
+
+    let url;
 
     if (
-      latitude === null ||
-      latitude === undefined ||
-      longitude === null ||
-      longitude === undefined
+      latitude !== null &&
+      latitude !== undefined &&
+      longitude !== null &&
+      longitude !== undefined
     ) {
+      url =
+        "https://www.google.com/maps/search/?api=1&query=" +
+        `${latitude},${longitude}`;
+    } else {
+      const searchText =
+        buildPropertySearch(plot);
+
+      url =
+        "https://www.google.com/maps/search/?api=1&query=" +
+        encodeURIComponent(searchText);
+    }
+
+    window.open(
+      url,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
+  function openAmenitySearch(plot, category) {
+    if (!plot) {
       return;
+    }
+
+    const latitude = plot.latitude;
+    const longitude = plot.longitude;
+
+    let query;
+
+    if (
+      latitude !== null &&
+      latitude !== undefined &&
+      longitude !== null &&
+      longitude !== undefined
+    ) {
+      query = `${category} near ${latitude},${longitude}`;
+    } else {
+      query = `${category} near ${buildPropertySearch(
+        plot
+      )}`;
     }
 
     const url =
       "https://www.google.com/maps/search/?api=1&query=" +
-      `${latitude},${longitude}`;
+      encodeURIComponent(query);
 
-    window.open(url, "_blank", "noopener,noreferrer");
+    window.open(
+      url,
+      "_blank",
+      "noopener,noreferrer"
+    );
   }
 
+  const amenityCategories = [
+    {
+      title: "Schools",
+      description:
+        "Find schools and educational institutions nearby.",
+      icon: School,
+      search: "schools",
+    },
+    {
+      title: "Hospitals",
+      description:
+        "Find hospitals, clinics and medical facilities.",
+      icon: Hospital,
+      search: "hospitals and clinics",
+    },
+    {
+      title: "Shopping",
+      description:
+        "Find shopping malls, markets and stores nearby.",
+      icon: ShoppingCart,
+      search: "shopping malls and markets",
+    },
+    {
+      title: "Restaurants",
+      description:
+        "Find restaurants and food options nearby.",
+      icon: Utensils,
+      search: "restaurants",
+    },
+    {
+      title: "Fitness",
+      description:
+        "Find gyms and fitness facilities nearby.",
+      icon: Dumbbell,
+      search: "gyms and fitness centers",
+    },
+  ];
+
   function renderPropertyCard(plot) {
-    const plotId = plot.plot_id ?? plot.id ?? plot.plot_number;
+    const plotId =
+      plot.plot_id ??
+      plot.id ??
+      plot.plot_number;
 
     return (
-      <article className="property-card" key={plotId}>
+      <article
+        className="property-card"
+        key={plotId}
+      >
         <div className="property-card-top">
           <div>
             <div className="property-number">
@@ -208,7 +358,11 @@ function App() {
 
             <div className="property-society">
               <MapPin size={14} />
-              <span>{plot.society || "Unknown Society"}</span>
+
+              <span>
+                {plot.society ||
+                  "Unknown Society"}
+              </span>
             </div>
           </div>
 
@@ -226,7 +380,9 @@ function App() {
             <span>Demand price</span>
 
             <strong>
-              {formatMillion(plot.demand_price)}
+              {formatMillion(
+                plot.demand_price
+              )}
             </strong>
           </div>
 
@@ -234,7 +390,9 @@ function App() {
             <span>Expected deal</span>
 
             <strong>
-              {formatMillion(plot.expected_deal_price)}
+              {formatMillion(
+                plot.expected_deal_price
+              )}
             </strong>
           </div>
         </div>
@@ -247,7 +405,10 @@ function App() {
             </span>
 
             <strong>
-              {formatNumber(plot.size_sqft)} sqft
+              {formatNumber(
+                plot.size_sqft
+              )}{" "}
+              sqft
             </strong>
           </div>
 
@@ -257,7 +418,9 @@ function App() {
               Facing
             </span>
 
-            <strong>{plot.facing || "N/A"}</strong>
+            <strong>
+              {plot.facing || "N/A"}
+            </strong>
           </div>
 
           <div className="detail">
@@ -266,7 +429,9 @@ function App() {
             <strong>
               {plot.width_ft !== null &&
               plot.width_ft !== undefined
-                ? `${formatNumber(plot.width_ft)} ft`
+                ? `${formatNumber(
+                    plot.width_ft
+                  )} ft`
                 : "N/A"}
             </strong>
           </div>
@@ -277,7 +442,9 @@ function App() {
             <strong>
               {plot.length_ft !== null &&
               plot.length_ft !== undefined
-                ? `${formatNumber(plot.length_ft)} ft`
+                ? `${formatNumber(
+                    plot.length_ft
+                  )} ft`
                 : "N/A"}
             </strong>
           </div>
@@ -302,50 +469,67 @@ function App() {
           )}
         </div>
 
-        {Array.isArray(plot.reasons) && plot.reasons.length > 0 && (
-          <div className="reasons">
-            <div className="reasons-title">
-              Why AI selected it
-            </div>
-
-            {plot.reasons.map((reason, index) => (
-              <div
-                className="reason"
-                key={`${plotId}-reason-${index}`}
-              >
-                <span className="reason-dot"></span>
-                <span>{reason}</span>
+        {Array.isArray(plot.reasons) &&
+          plot.reasons.length > 0 && (
+            <div className="reasons">
+              <div className="reasons-title">
+                Why AI selected it
               </div>
-            ))}
-          </div>
-        )}
 
-        {plot.latitude !== null &&
-          plot.latitude !== undefined &&
-          plot.longitude !== null &&
-          plot.longitude !== undefined && (
-            <div className="coordinates">
-              <MapPin size={13} />
-
-              <span>
-                {Number(plot.latitude).toFixed(4)},{" "}
-                {Number(plot.longitude).toFixed(4)}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => openMap(plot)}
-              >
-                <ExternalLink size={13} />
-                Map
-              </button>
+              {plot.reasons.map(
+                (reason, index) => (
+                  <div
+                    className="reason"
+                    key={`${plotId}-reason-${index}`}
+                  >
+                    <span className="reason-dot"></span>
+                    <span>{reason}</span>
+                  </div>
+                )
+              )}
             </div>
           )}
+
+        <div className="coordinates">
+          <MapPin size={13} />
+
+          {plot.latitude !== null &&
+          plot.latitude !== undefined &&
+          plot.longitude !== null &&
+          plot.longitude !== undefined ? (
+            <span>
+              {Number(
+                plot.latitude
+              ).toFixed(4)}
+              ,{" "}
+              {Number(
+                plot.longitude
+              ).toFixed(4)}
+            </span>
+          ) : (
+            <span>
+              Location available through
+              property search
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={() =>
+              openMap(plot)
+            }
+          >
+            <ExternalLink size={13} />
+            Map
+          </button>
+        </div>
 
         <button
           className="view-property-button"
           type="button"
-          onClick={() => setSelectedPlot(plot)}
+          onClick={() =>
+            setSelectedPlot(plot)
+          }
         >
           View property details
           <ArrowRight size={15} />
@@ -360,7 +544,10 @@ function App() {
         <div className="header-inner">
           <div className="brand">
             <div className="brand-mark">
-              <Building2 size={21} strokeWidth={2.2} />
+              <Building2
+                size={21}
+                strokeWidth={2.2}
+              />
             </div>
 
             <div>
@@ -374,18 +561,35 @@ function App() {
             </div>
           </div>
 
-          <div
-            className={
-              apiConnected
-                ? "header-status connected"
-                : "header-status disconnected"
-            }
-          >
-            <span className="status-dot"></span>
+          <div className="header-actions">
+            <button
+              className="dashboard-button"
+              type="button"
+              onClick={() =>
+                setShowDashboard(
+                  !showDashboard
+                )
+              }
+            >
+              <LayoutDashboard
+                size={16}
+              />
+              Dashboard
+            </button>
 
-            {apiConnected
-              ? "API Connected"
-              : "API Connection Error"}
+            <div
+              className={
+                apiConnected
+                  ? "header-status connected"
+                  : "header-status disconnected"
+              }
+            >
+              <span className="status-dot"></span>
+
+              {apiConnected
+                ? "API Connected"
+                : "API Connection Error"}
+            </div>
           </div>
         </div>
       </header>
@@ -399,18 +603,24 @@ function App() {
 
             <h1>
               Find property with
-              <span> better intelligence.</span>
+              <span>
+                {" "}
+                better intelligence.
+              </span>
             </h1>
 
             <p className="hero-description">
-              Search properties, compare market prices,
-              evaluate investments and discover better
-              opportunities with AI-powered insights.
+              Search properties, compare market
+              prices, evaluate investments and
+              discover better opportunities with
+              AI-powered insights.
             </p>
           </div>
 
           <div className="hero-badge">
-            <div className="hero-ai">AI</div>
+            <div className="hero-ai">
+              AI
+            </div>
 
             <div className="hero-ai-label">
               Property Assistant
@@ -418,10 +628,282 @@ function App() {
           </div>
         </section>
 
+        {showDashboard && (
+          <section className="intelligence-dashboard">
+            <div className="dashboard-heading">
+              <div>
+                <div className="eyebrow">
+                  FINAL INTELLIGENCE DASHBOARD
+                </div>
+
+                <h2>
+                  Real Estate Market Overview
+                </h2>
+
+                <p>
+                  Live decision-support view of
+                  your property inventory and
+                  market intelligence.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="dashboard-refresh"
+                onClick={
+                  loadMarketOverview
+                }
+              >
+                Refresh data
+              </button>
+            </div>
+
+            <div className="dashboard-grid">
+              <div className="dashboard-card">
+                <span>
+                  Total Properties
+                </span>
+
+                <strong>
+                  {marketData?.total_plots ??
+                    0}
+                </strong>
+
+                <small>
+                  Properties in inventory
+                </small>
+              </div>
+
+              <div className="dashboard-card">
+                <span>
+                  Average Demand
+                </span>
+
+                <strong>
+                  {formatMillion(
+                    marketData?.average_demand_price
+                  )}
+                </strong>
+
+                <small>
+                  Current market demand
+                </small>
+              </div>
+
+              <div className="dashboard-card">
+                <span>
+                  Average Price / Sqft
+                </span>
+
+                <strong>
+                  {marketData?.average_price_per_sqft
+                    ? `PKR ${formatNumber(
+                        Math.round(
+                          Number(
+                            marketData.average_price_per_sqft
+                          )
+                        )
+                      )}`
+                    : "N/A"}
+                </strong>
+
+                <small>
+                  Market average
+                </small>
+              </div>
+
+              <div className="dashboard-card">
+                <span>
+                  Average Discount
+                </span>
+
+                <strong>
+                  {marketData?.average_discount_percentage !==
+                    null &&
+                  marketData?.average_discount_percentage !==
+                    undefined
+                    ? `${Number(
+                        marketData.average_discount_percentage
+                      ).toFixed(2)}%`
+                    : "N/A"}
+                </strong>
+
+                <small>
+                  Negotiation potential
+                </small>
+              </div>
+            </div>
+
+            <div className="dashboard-lower-grid">
+              <div className="dashboard-panel">
+                <div className="dashboard-panel-title">
+                  <BarChart3
+                    size={18}
+                  />
+
+                  <span>
+                    Market Range
+                  </span>
+                </div>
+
+                <div className="dashboard-range">
+                  <div>
+                    <span>
+                      Minimum Demand
+                    </span>
+
+                    <strong>
+                      {formatMillion(
+                        marketData?.minimum_demand_price
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      Maximum Demand
+                    </span>
+
+                    <strong>
+                      {formatMillion(
+                        marketData?.maximum_demand_price
+                      )}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="dashboard-panel">
+                <div className="dashboard-panel-title">
+                  <Building2
+                    size={18}
+                  />
+
+                  <span>
+                    Inventory Composition
+                  </span>
+                </div>
+
+                <div className="inventory-bars">
+                  <div className="inventory-row">
+                    <span>
+                      Corner Plots
+                    </span>
+
+                    <strong>
+                      {marketData?.corner_plots ??
+                        0}
+                    </strong>
+                  </div>
+
+                  <div className="inventory-bar">
+                    <span
+                      style={{
+                        width: `${
+                          marketData?.total_plots
+                            ? Math.min(
+                                100,
+                                (Number(
+                                  marketData.corner_plots ??
+                                    0
+                                ) /
+                                  Number(
+                                    marketData.total_plots
+                                  )) *
+                                  100
+                              )
+                            : 0
+                        }%`,
+                      }}
+                    ></span>
+                  </div>
+
+                  <div className="inventory-row">
+                    <span>
+                      Non-Corner Plots
+                    </span>
+
+                    <strong>
+                      {marketData?.non_corner_plots ??
+                        0}
+                    </strong>
+                  </div>
+
+                  <div className="inventory-bar">
+                    <span
+                      style={{
+                        width: `${
+                          marketData?.total_plots
+                            ? Math.min(
+                                100,
+                                (Number(
+                                  marketData.non_corner_plots ??
+                                    0
+                                ) /
+                                  Number(
+                                    marketData.total_plots
+                                  )) *
+                                  100
+                              )
+                            : 0
+                        }%`,
+                      }}
+                    ></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="dashboard-features">
+              <div>
+                <CheckCircle2
+                  size={18}
+                />
+
+                <span>
+                  AI Property Recommendations
+                </span>
+              </div>
+
+              <div>
+                <CheckCircle2
+                  size={18}
+                />
+
+                <span>
+                  PostGIS Property Locations
+                </span>
+              </div>
+
+              <div>
+                <CheckCircle2
+                  size={18}
+                />
+
+                <span>
+                  Market Analytics
+                </span>
+              </div>
+
+              <div>
+                <CheckCircle2
+                  size={18}
+                />
+
+                <span>
+                  Nearby Amenities
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="assistant-panel">
           <div className="assistant-title">
             <Sparkles size={19} />
-            <span>Ask the Property Assistant</span>
+            <span>
+              Ask the Property Assistant
+            </span>
           </div>
 
           <div className="search-row">
@@ -435,9 +917,13 @@ function App() {
                 type="text"
                 value={assistantQuery}
                 onChange={(event) =>
-                  setAssistantQuery(event.target.value)
+                  setAssistantQuery(
+                    event.target.value
+                  )
                 }
-                onKeyDown={handleKeyDown}
+                onKeyDown={
+                  handleKeyDown
+                }
                 placeholder='Try "Show me plots above 3000 sqft in Lake City"'
               />
 
@@ -445,7 +931,11 @@ function App() {
                 <button
                   className="clear-input"
                   type="button"
-                  onClick={() => setAssistantQuery("")}
+                  onClick={() =>
+                    setAssistantQuery(
+                      ""
+                    )
+                  }
                 >
                   <X size={16} />
                 </button>
@@ -455,7 +945,9 @@ function App() {
             <button
               className="search-button"
               type="button"
-              onClick={() => handleAssistantSearch()}
+              onClick={() =>
+                handleAssistantSearch()
+              }
               disabled={
                 loadingAssistant ||
                 !assistantQuery.trim()
@@ -472,7 +964,9 @@ function App() {
               ) : (
                 <>
                   Search
-                  <ArrowRight size={17} />
+                  <ArrowRight
+                    size={17}
+                  />
                 </>
               )}
             </button>
@@ -518,11 +1012,15 @@ function App() {
           <div className="error-message">
             <AlertCircle size={18} />
 
-            <span>{marketError}</span>
+            <span>
+              {marketError}
+            </span>
 
             <button
               type="button"
-              onClick={loadMarketOverview}
+              onClick={
+                loadMarketOverview
+              }
             >
               Retry
             </button>
@@ -543,7 +1041,8 @@ function App() {
               <div className="stat-value">
                 {loadingMarket
                   ? "..."
-                  : marketData?.total_plots ?? 0}
+                  : marketData?.total_plots ??
+                    0}
               </div>
 
               <div className="stat-description">
@@ -554,7 +1053,9 @@ function App() {
 
           <div className="stat-card">
             <div className="stat-icon">
-              <CircleDollarSign size={21} />
+              <CircleDollarSign
+                size={21}
+              />
             </div>
 
             <div className="stat-content">
@@ -636,67 +1137,83 @@ function App() {
           </div>
         </section>
 
-        {marketData && !loadingMarket && (
-          <section className="market-summary">
-            <div className="section-heading">
-              <div>
-                <div className="eyebrow">
-                  MARKET SNAPSHOT
+        {marketData &&
+          !loadingMarket && (
+            <section className="market-summary">
+              <div className="section-heading">
+                <div>
+                  <div className="eyebrow">
+                    MARKET SNAPSHOT
+                  </div>
+
+                  <h2>
+                    Current property market
+                  </h2>
                 </div>
 
-                <h2>Current property market</h2>
+                <div className="market-live">
+                  <span></span>
+                  Live database
+                </div>
               </div>
 
-              <div className="market-live">
-                <span></span>
-                Live database
+              <div className="summary-grid">
+                <div className="summary-item">
+                  <span>
+                    Minimum Demand
+                  </span>
+
+                  <strong>
+                    {formatMillion(
+                      marketData.minimum_demand_price
+                    )}
+                  </strong>
+                </div>
+
+                <div className="summary-item">
+                  <span>
+                    Maximum Demand
+                  </span>
+
+                  <strong>
+                    {formatMillion(
+                      marketData.maximum_demand_price
+                    )}
+                  </strong>
+                </div>
+
+                <div className="summary-item">
+                  <span>
+                    Corner Plots
+                  </span>
+
+                  <strong>
+                    {marketData.corner_plots ??
+                      0}
+                  </strong>
+                </div>
+
+                <div className="summary-item">
+                  <span>
+                    Non-Corner Plots
+                  </span>
+
+                  <strong>
+                    {marketData.non_corner_plots ??
+                      0}
+                  </strong>
+                </div>
               </div>
-            </div>
-
-            <div className="summary-grid">
-              <div className="summary-item">
-                <span>Minimum Demand</span>
-
-                <strong>
-                  {formatMillion(
-                    marketData.minimum_demand_price
-                  )}
-                </strong>
-              </div>
-
-              <div className="summary-item">
-                <span>Maximum Demand</span>
-
-                <strong>
-                  {formatMillion(
-                    marketData.maximum_demand_price
-                  )}
-                </strong>
-              </div>
-
-              <div className="summary-item">
-                <span>Corner Plots</span>
-
-                <strong>
-                  {marketData.corner_plots ?? 0}
-                </strong>
-              </div>
-
-              <div className="summary-item">
-                <span>Non-Corner Plots</span>
-
-                <strong>
-                  {marketData.non_corner_plots ?? 0}
-                </strong>
-              </div>
-            </div>
-          </section>
-        )}
+            </section>
+          )}
 
         {assistantError && (
           <div className="error-message assistant-error">
             <AlertCircle size={18} />
-            <span>{assistantError}</span>
+
+            <span>
+              {assistantError}
+            </span>
           </div>
         )}
 
@@ -719,10 +1236,11 @@ function App() {
               <div className="result-count">
                 <BarChart3 size={15} />
 
-                {assistantResults.total_results ?? 0}{" "}
+                {assistantResults.total_results ??
+                  0}{" "}
                 result
-                {(assistantResults.total_results ?? 0) !==
-                1
+                {(assistantResults.total_results ??
+                  0) !== 1
                   ? "s"
                   : ""}
               </div>
@@ -743,34 +1261,48 @@ function App() {
               ).length > 0 && (
                 <div className="interpreted-filters">
                   <div className="filter-title">
-                    <CheckCircle2 size={15} />
+                    <CheckCircle2
+                      size={15}
+                    />
                     Search interpreted
                   </div>
 
                   <div className="filter-list">
                     {Object.entries(
                       assistantResults.interpreted_filters
-                    ).map(([key, value]) => (
-                      <span
-                        className="filter-chip"
-                        key={key}
-                      >
-                        {key.replaceAll("_", " ")}:{" "}
-                        <strong>
-                          {typeof value === "boolean"
-                            ? value
-                              ? "Yes"
-                              : "No"
-                            : String(value)}
-                        </strong>
-                      </span>
-                    ))}
+                    ).map(
+                      ([key, value]) => (
+                        <span
+                          className="filter-chip"
+                          key={key}
+                        >
+                          {key.replaceAll(
+                            "_",
+                            " "
+                          )}
+                          :{" "}
+                          <strong>
+                            {typeof value ===
+                            "boolean"
+                              ? value
+                                ? "Yes"
+                                : "No"
+                              : String(
+                                  value
+                                )}
+                          </strong>
+                        </span>
+                      )
+                    )}
                   </div>
                 </div>
               )}
 
-            {Array.isArray(assistantResults.plots) &&
-            assistantResults.plots.length > 0 ? (
+            {Array.isArray(
+              assistantResults.plots
+            ) &&
+            assistantResults.plots.length >
+              0 ? (
               <div className="property-grid">
                 {assistantResults.plots.map(
                   renderPropertyCard
@@ -782,11 +1314,14 @@ function App() {
                   <Search size={28} />
                 </div>
 
-                <h3>No matching properties</h3>
+                <h3>
+                  No matching properties
+                </h3>
 
                 <p>
-                  Try changing your budget, plot size,
-                  society or other requirements.
+                  Try changing your budget,
+                  plot size, society or other
+                  requirements.
                 </p>
 
                 <button
@@ -805,39 +1340,42 @@ function App() {
           </section>
         )}
 
-        {!assistantResults && !loadingMarket && (
-          <section className="recommendation-placeholder">
-            <div className="placeholder-icon">
-              <Sparkles size={22} />
-            </div>
-
-            <div>
-              <div className="eyebrow">
-                AI RECOMMENDATIONS
+        {!assistantResults &&
+          !loadingMarket && (
+            <section className="recommendation-placeholder">
+              <div className="placeholder-icon">
+                <Sparkles size={22} />
               </div>
 
-              <h2>Properties worth exploring</h2>
+              <div>
+                <div className="eyebrow">
+                  AI RECOMMENDATIONS
+                </div>
 
-              <p>
-                Use the Property Assistant above to
-                find properties based on your
-                requirements.
-              </p>
-            </div>
+                <h2>
+                  Properties worth exploring
+                </h2>
 
-            <button
-              type="button"
-              onClick={() =>
-                handleQuickSearch(
-                  "Show me corner plots under 50 million"
-                )
-              }
-            >
-              Explore properties
-              <ArrowRight size={17} />
-            </button>
-          </section>
-        )}
+                <p>
+                  Use the Property Assistant
+                  above to find properties based
+                  on your requirements.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleQuickSearch(
+                    "Show me corner plots under 50 million"
+                  )
+                }
+              >
+                Explore properties
+                <ArrowRight size={17} />
+              </button>
+            </section>
+          )}
       </main>
 
       <footer className="footer">
@@ -853,7 +1391,9 @@ function App() {
       {selectedPlot && (
         <div
           className="modal-backdrop"
-          onClick={() => setSelectedPlot(null)}
+          onClick={() =>
+            setSelectedPlot(null)
+          }
         >
           <div
             className="property-modal"
@@ -864,7 +1404,9 @@ function App() {
             <button
               className="modal-close"
               type="button"
-              onClick={() => setSelectedPlot(null)}
+              onClick={() =>
+                setSelectedPlot(null)
+              }
             >
               <X size={20} />
             </button>
@@ -874,7 +1416,9 @@ function App() {
             </div>
 
             <h2>
-              Plot {selectedPlot.plot_number ?? "N/A"}
+              Plot{" "}
+              {selectedPlot.plot_number ??
+                "N/A"}
             </h2>
 
             <p className="modal-location">
@@ -892,10 +1436,14 @@ function App() {
 
             <div className="modal-score">
               <div>
-                <span>AI MATCH SCORE</span>
+                <span>
+                  AI MATCH SCORE
+                </span>
 
                 <strong>
-                  {selectedPlot.match_score ?? 0}/100
+                  {selectedPlot.match_score ??
+                    0}
+                  /100
                 </strong>
               </div>
 
@@ -911,7 +1459,9 @@ function App() {
 
             <div className="modal-grid">
               <div>
-                <span>Demand Price</span>
+                <span>
+                  Demand Price
+                </span>
 
                 <strong>
                   {formatMillion(
@@ -921,7 +1471,9 @@ function App() {
               </div>
 
               <div>
-                <span>Expected Deal</span>
+                <span>
+                  Expected Deal
+                </span>
 
                 <strong>
                   {formatMillion(
@@ -931,7 +1483,9 @@ function App() {
               </div>
 
               <div>
-                <span>Plot Size</span>
+                <span>
+                  Plot Size
+                </span>
 
                 <strong>
                   {formatNumber(
@@ -945,7 +1499,8 @@ function App() {
                 <span>Facing</span>
 
                 <strong>
-                  {selectedPlot.facing || "N/A"}
+                  {selectedPlot.facing ||
+                    "N/A"}
                 </strong>
               </div>
 
@@ -953,8 +1508,10 @@ function App() {
                 <span>Width</span>
 
                 <strong>
-                  {selectedPlot.width_ft !== null &&
-                  selectedPlot.width_ft !== undefined
+                  {selectedPlot.width_ft !==
+                    null &&
+                  selectedPlot.width_ft !==
+                    undefined
                     ? `${formatNumber(
                         selectedPlot.width_ft
                       )} ft`
@@ -966,51 +1523,185 @@ function App() {
                 <span>Length</span>
 
                 <strong>
-                  {selectedPlot.length_ft !== null &&
-                  selectedPlot.length_ft !== undefined
+                  {selectedPlot.length_ft !==
+                    null &&
+                  selectedPlot.length_ft !==
+                    undefined
                     ? `${formatNumber(
                         selectedPlot.length_ft
                       )} ft`
                     : "N/A"}
                 </strong>
               </div>
+
+              <div>
+                <span>
+                  Corner Plot
+                </span>
+
+                <strong>
+                  {selectedPlot.is_corner
+                    ? "Yes"
+                    : "No"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Plot Number
+                </span>
+
+                <strong>
+                  {selectedPlot.plot_number ||
+                    "N/A"}
+                </strong>
+              </div>
             </div>
 
-            {Array.isArray(selectedPlot.reasons) &&
-              selectedPlot.reasons.length > 0 && (
+            {Array.isArray(
+              selectedPlot.reasons
+            ) &&
+              selectedPlot.reasons.length >
+                0 && (
                 <div className="modal-reasons">
-                  <h3>AI reasoning</h3>
+                  <h3>
+                    AI reasoning
+                  </h3>
 
                   {selectedPlot.reasons.map(
-                    (reason, index) => (
+                    (
+                      reason,
+                      index
+                    ) => (
                       <div
                         className="modal-reason"
                         key={index}
                       >
-                        <CheckCircle2 size={15} />
-                        <span>{reason}</span>
+                        <CheckCircle2
+                          size={15}
+                        />
+
+                        <span>
+                          {reason}
+                        </span>
                       </div>
                     )
                   )}
                 </div>
               )}
 
-            {selectedPlot.latitude !== null &&
-              selectedPlot.latitude !== undefined &&
-              selectedPlot.longitude !== null &&
-              selectedPlot.longitude !== undefined && (
-                <button
-                  className="modal-map-button"
-                  type="button"
-                  onClick={() =>
-                    openMap(selectedPlot)
+            <div className="amenities-section">
+              <div className="modal-eyebrow">
+                NEARBY AMENITIES
+              </div>
+
+              <h3>
+                Explore nearby facilities
+              </h3>
+
+              <p className="amenities-description">
+                Search Google Maps for nearby
+                facilities around this property.
+              </p>
+
+              <div className="amenities-grid">
+                {amenityCategories.map(
+                  (amenity) => {
+                    const Icon =
+                      amenity.icon;
+
+                    return (
+                      <button
+                        key={
+                          amenity.title
+                        }
+                        type="button"
+                        className="amenity-card"
+                        onClick={() =>
+                          openAmenitySearch(
+                            selectedPlot,
+                            amenity.search
+                          )
+                        }
+                      >
+                        <div className="amenity-icon">
+                          <Icon
+                            size={20}
+                          />
+                        </div>
+
+                        <div>
+                          <strong>
+                            {amenity.title}
+                          </strong>
+
+                          <span>
+                            {amenity.description}
+                          </span>
+                        </div>
+
+                        <ExternalLink
+                          size={15}
+                        />
+                      </button>
+                    );
                   }
-                >
-                  <MapPin size={17} />
-                  Open property location
-                  <ExternalLink size={15} />
-                </button>
-              )}
+                )}
+              </div>
+            </div>
+
+            <div className="modal-map-section">
+              <div className="modal-map-info">
+                <MapPin size={18} />
+
+                <div>
+                  <strong>
+                    Property Location
+                  </strong>
+
+                  <span>
+                    {selectedPlot.latitude !==
+                      null &&
+                    selectedPlot.latitude !==
+                      undefined &&
+                    selectedPlot.longitude !==
+                      null &&
+                    selectedPlot.longitude !==
+                      undefined
+                      ? `${Number(
+                          selectedPlot.latitude
+                        ).toFixed(
+                          5
+                        )}, ${Number(
+                          selectedPlot.longitude
+                        ).toFixed(
+                          5
+                        )}`
+                      : "Search property location"}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                className="modal-map-button"
+                type="button"
+                onClick={() =>
+                  openMap(
+                    selectedPlot
+                  )
+                }
+              >
+                <Navigation
+                  size={17}
+                />
+
+                Open property location
+
+                <ExternalLink
+                  size={15}
+                />
+              </button>
+            </div>
           </div>
         </div>
       )}

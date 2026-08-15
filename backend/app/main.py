@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from .database import get_db
 from .models import Plot
@@ -2584,3 +2585,107 @@ def price_prediction(
 
         "message": None
     }
+@app.get("/plots/societies")
+def get_societies():
+    try:
+        rows = db.execute(
+            text("""
+                SELECT DISTINCT society
+                FROM plots
+                WHERE society IS NOT NULL
+                ORDER BY society
+            """)
+        ).fetchall()
+
+        return [
+            row[0]
+            for row in rows
+        ]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unable to load societies: {str(e)}"
+        )
+
+
+@app.get("/plots/map")
+def get_plots_for_map(
+    society: str | None = None
+):
+    try:
+        if society:
+            rows = db.execute(
+                text("""
+                    SELECT
+                        id,
+                        society,
+                        phase,
+                        block,
+                        plot_number,
+                        size_sqft,
+                        facing,
+                        is_corner,
+                        demand_price,
+                        expected_deal_price,
+                        ST_Y(location) AS latitude,
+                        ST_X(location) AS longitude
+                    FROM plots
+                    WHERE society = :society
+                    ORDER BY id
+                """),
+                {
+                    "society": society
+                }
+            ).mappings().all()
+
+        else:
+            rows = db.execute(
+                text("""
+                    SELECT
+                        id,
+                        society,
+                        phase,
+                        block,
+                        plot_number,
+                        size_sqft,
+                        facing,
+                        is_corner,
+                        demand_price,
+                        expected_deal_price,
+                        ST_Y(location) AS latitude,
+                        ST_X(location) AS longitude
+                    FROM plots
+                    ORDER BY id
+                """)
+            ).mappings().all()
+
+        return [
+            {
+                "plot_id": row["id"],
+                "society": row["society"],
+                "phase": row["phase"],
+                "block": row["block"],
+                "plot_number": row["plot_number"],
+                "size_sqft": row["size_sqft"],
+                "facing": row["facing"],
+                "is_corner": row["is_corner"],
+                "demand_price": row["demand_price"],
+                "expected_deal_price": row[
+                    "expected_deal_price"
+                ],
+                "latitude": float(row["latitude"])
+                if row["latitude"] is not None
+                else None,
+                "longitude": float(row["longitude"])
+                if row["longitude"] is not None
+                else None,
+            }
+            for row in rows
+        ]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unable to load map properties: {str(e)}"
+        )

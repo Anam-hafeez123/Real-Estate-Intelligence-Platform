@@ -8,6 +8,7 @@ from sqlalchemy import text
 
 from .database import get_db
 from .models import Plot
+from .business_modules import router as business_router
 
 from .schemas import (
     PlotCreate,
@@ -32,6 +33,7 @@ app = FastAPI(
     title="Real Estate Intelligence Platform API",
     version="1.0.0"
 )
+app.include_router(business_router)
 # ============================================================
 # CORS CONFIGURATION
 # ============================================================

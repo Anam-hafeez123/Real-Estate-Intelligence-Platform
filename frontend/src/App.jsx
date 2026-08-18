@@ -29,6 +29,7 @@ import {
 
 import api from "./services/api";
 import "./App.css";
+import BusinessModules from "./components/BusinessModules";
 
 function formatMillion(value) {
   if (
@@ -1376,6 +1377,7 @@ function App() {
               </button>
             </section>
           )}
+          <BusinessModules />
       </main>
 
       <footer className="footer">
